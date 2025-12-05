@@ -50,34 +50,39 @@ strategy_id = "1234" # Must be a string of numbers, equivalent to MT5 Magic Numb
 )
 def my_strategy(event: BarEvent, modules: Modules):
     """Simple moving average crossover strategy"""
-    bars = modules.DATA_PROVIDER.get_latest_bars(
-        event.symbol, 
-        StrategyTimeframes.ONE_HOUR, 
-        50
-    )
-    
+    bars = modules.DATA_PROVIDER.get_latest_bars(event.symbol, StrategyTimeframes.ONE_HOUR, 50)
     if bars is None or bars.height < 50:
         return []
     
     close = bars.select('close').to_numpy().flatten()
-    fast_ma = SMA.compute(close, 10)[-1]
-    slow_ma = SMA.compute(close, 30)[-1]
+    fast_ma, slow_ma = SMA.compute(close, 10)[-1], SMA.compute(close, 30)[-1]
     
-    signal_events = []
-    if fast_ma > slow_ma:
-        signal_events.append(SignalEvent(
-            symbol=event.symbol,
-            time_generated=event.datetime,
-            strategy_id=strategy_id,
-            forecast=1,
-            signal_type="BUY",
-            order_type="MARKET",
-            order_price=modules.DATA_PROVIDER.get_latest_tick(event.symbol)['ask'],
-            sl=0.0,
-            tp=0.0,
-        ))
+    open_pos = modules.PORTFOLIO.get_number_of_strategy_open_positions_by_symbol(event.symbol)
+    signal_type = ""
     
-    return signal_events
+    if fast_ma > slow_ma and open_pos['LONG'] == 0:
+        if open_pos['SHORT'] > 0:
+            modules.EXECUTION_ENGINE.close_strategy_short_positions_by_symbol(event.symbol)
+        signal_type = "BUY"
+    elif fast_ma < slow_ma and open_pos['SHORT'] == 0:
+        if open_pos['LONG'] > 0:
+            modules.EXECUTION_ENGINE.close_strategy_long_positions_by_symbol(event.symbol)
+        signal_type = "SELL"
+    
+    if not signal_type:
+        return []
+    
+    tick = modules.DATA_PROVIDER.get_latest_tick(event.symbol)
+    return [SignalEvent(
+        symbol=event.symbol,
+        time_generated=event.datetime,
+        strategy_id=strategy_id,
+        signal_type=signal_type,
+        order_type="MARKET",
+        order_price=tick['ask'] if signal_type == "BUY" else tick['bid'],
+        sl=0.0,
+        tp=0.0,
+    )]
 ```
 
 ### 2. Configure and Run Backtest
@@ -96,7 +101,10 @@ backtest = strategy.backtest(
     backtest_name="example",
     start_date=datetime(2020, 1, 1),
     end_date=datetime(2023, 12, 31),
-    account_currency='USD'
+    account_currency='USD',
+    export_backtest_csv=False,
+    export_backtest_parquet=True,
+    backtest_results_dir=None,  # Defaults to Desktop/PyEventBT/backtest_results
 )
 
 backtest.plot()
@@ -226,7 +234,6 @@ def bbands_breakout(event: BarEvent, modules: Modules):
             symbol=symbol,
             time_generated=time_generated,
             strategy_id=strategy_id,
-            forecast=20,
             signal_type="BUY",
             order_type="STOP",
             order_price=upper_breakout,
@@ -239,7 +246,6 @@ def bbands_breakout(event: BarEvent, modules: Modules):
             symbol=symbol,
             time_generated=time_generated,
             strategy_id=strategy_id,
-            forecast=20,
             signal_type="SELL",
             order_type="STOP",
             order_price=lower_breakout,
@@ -259,7 +265,7 @@ strategy.configure_predefined_risk_engine(PassthroughRiskConfig())
 # Backtest Configuration
 from_date = datetime(year=2020, month=1, day=1)
 to_date = datetime(year=2023, month=12, day=1)
-csv_dir = '/path/to/data'
+csv_dir = None # '/path/to/your/data' or None for default dataset
 
 # Launch Backtest
 backtest = strategy.backtest(
@@ -270,7 +276,8 @@ backtest = strategy.backtest(
     backtest_name=strategy_id,
     start_date=from_date,
     end_date=to_date,
-    export_backtest_pickle=False,
+    export_backtest_csv=True
+    export_backtest_parquet=False,
     account_currency='USD'
 )
 
@@ -301,3 +308,7 @@ The documentation includes:
 ## License
 
 Apache 2.0
+
+## Author
+
+Made with ❤️ for the community by [Martí Castany](https://www.linkedin.com/in/marti-castany/)
