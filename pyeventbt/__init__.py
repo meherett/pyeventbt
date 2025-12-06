@@ -6,9 +6,7 @@ GitHub: https://github.com/marticastany/pyeventbt
 Author: Marti Castany
 Copyright (c) 2025 Marti Castany
 Licensed under the Apache License, Version 2.0
-"""
 
-"""
 PyEventBT - Event-Driven Backtesting Framework
 
 A powerful event-driven backtesting and live trading framework for algorithmic trading strategies.
@@ -26,7 +24,14 @@ Usage:
         return []
 """
 
-__version__ = "0.0.1"
+# Dynamically read version from package metadata (pyproject.toml is the single source of truth)
+try:
+    from importlib.metadata import version
+    __version__ = version("pyeventbt")
+except Exception:
+    # Fallback for development installations where package metadata might not be available
+    __version__ = "0.0.0-dev"
+
 __author__ = "Marti Castany, Alain Porto"
 __website__ = "https://github.com/marticastany/pyeventbt"
 __license__ = "Apache License, Version 2.0"
