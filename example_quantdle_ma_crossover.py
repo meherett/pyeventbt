@@ -79,7 +79,7 @@ print("="*80 + "\n")
 # STEP 3: DEFINE YOUR STRATEGY (MA Crossover)
 # =============================================================================
 
-strategy_id = "quantdle_ma_crossover"
+strategy_id = "1234"
 strategy = Strategy(logging_level=logging.INFO)
 
 # Timeframes
