@@ -1478,3 +1478,115 @@ class Aroon(IIndicator):
             raise ValueError(f"Array length must be at least {period + 1}")
         
         return Aroon._Aroon__compute_aroon(high, low, period)
+
+class RVI(IIndicator):
+    """Relative Vigor Index (RVI) indicator."""
+
+    @staticmethod
+    @njit
+    def __compute_rvi(open_: np.ndarray, high: np.ndarray, low: np.ndarray,
+                      close: np.ndarray, period: int) -> tuple:
+        """
+        Compute RVI and its signal line using Numba for performance.
+        Returns (rvi, signal)
+
+        Formula:
+            SWMA weights = [1, 2, 2, 1] / 6  (symmetric 4-bar weighted MA)
+            numerator[i]   = SWMA(close - open, i)
+            denominator[i] = SWMA(high - low, i)
+            RVI[i]         = SMA(numerator, period) / SMA(denominator, period)
+            signal[i]      = SWMA(RVI, i)
+        """
+        n = len(close)
+        rvi = np.empty(n, dtype=np.float64)
+        signal = np.empty(n, dtype=np.float64)
+        rvi[:] = np.nan
+        signal[:] = np.nan
+
+        # SWMA start index requires 3 preceding bars (indices 0-2 are warmup)
+        swma_start = 3
+
+        # Pre-compute SWMA of (close-open) and (high-low) at every valid bar
+        num_swma = np.empty(n, dtype=np.float64)
+        den_swma = np.empty(n, dtype=np.float64)
+        num_swma[:] = np.nan
+        den_swma[:] = np.nan
+
+        for i in range(swma_start, n):
+            co0 = close[i]     - open_[i]
+            co1 = close[i - 1] - open_[i - 1]
+            co2 = close[i - 2] - open_[i - 2]
+            co3 = close[i - 3] - open_[i - 3]
+            num_swma[i] = (co0 + 2.0 * co1 + 2.0 * co2 + co3) / 6.0
+
+            hl0 = high[i]     - low[i]
+            hl1 = high[i - 1] - low[i - 1]
+            hl2 = high[i - 2] - low[i - 2]
+            hl3 = high[i - 3] - low[i - 3]
+            den_swma[i] = (hl0 + 2.0 * hl1 + 2.0 * hl2 + hl3) / 6.0
+
+        # Rolling SMA of num_swma and den_swma over `period` bars
+        rvi_start = swma_start + period - 1
+        num_sum = 0.0
+        den_sum = 0.0
+
+        for i in range(swma_start, n):
+            num_sum += num_swma[i]
+            den_sum += den_swma[i]
+
+            j = i - swma_start  # how many elements have been summed so far
+            if j >= period:
+                num_sum -= num_swma[i - period]
+                den_sum -= den_swma[i - period]
+
+            if i >= rvi_start:
+                if den_sum != 0.0:
+                    rvi[i] = num_sum / den_sum
+                else:
+                    rvi[i] = 0.0
+
+        # Signal line: SWMA of RVI over 4 bars
+        for i in range(rvi_start + 3, n):
+            if (not np.isnan(rvi[i])     and not np.isnan(rvi[i - 1]) and
+                    not np.isnan(rvi[i - 2]) and not np.isnan(rvi[i - 3])):
+                signal[i] = (rvi[i] + 2.0 * rvi[i - 1] + 2.0 * rvi[i - 2] + rvi[i - 3]) / 6.0
+
+        return rvi, signal
+
+    @staticmethod
+    def compute(open_: np.ndarray, high: np.ndarray, low: np.ndarray,
+                close: np.ndarray, period: int = 10) -> tuple:
+        """Calculate the Relative Vigor Index (RVI) indicator values.
+
+        Parameters:
+            open_ (np.ndarray): Open prices as a numpy array.
+            high (np.ndarray): High prices as a numpy array.
+            low (np.ndarray): Low prices as a numpy array.
+            close (np.ndarray): Close prices as a numpy array.
+            period (int): The number of periods for the RVI SMA smoothing. Default is 10.
+
+        Returns:
+            tuple: (rvi, signal) as numpy arrays.
+
+        Usage:
+        ```python
+        open_prices  = np.array([100, 101, 102, 103, 104])
+        high_prices  = np.array([102, 103, 104, 105, 106])
+        low_prices   = np.array([99,  100, 101, 102, 103])
+        close_prices = np.array([101, 102, 103, 104, 105])
+        rvi_values, signal_values = RVI.compute(open_prices, high_prices, low_prices, close_prices, period=10)
+        ```
+        """
+        if period < 1:
+            raise ValueError("Period must be greater than 0.")
+
+        n = len(open_)
+        if len(high) != n or len(low) != n or len(close) != n:
+            raise ValueError("Open, high, low, and close arrays must have the same length.")
+
+        # Minimum: 3 bars for first SWMA + period bars for first SMA + 3 bars for signal SWMA
+        min_length = 3 + period + 3
+        if n < min_length:
+            raise ValueError(f"Array length must be at least {min_length}")
+
+        return RVI._RVI__compute_rvi(open_, high, low, close, period)
