@@ -1479,6 +1479,7 @@ class Aroon(IIndicator):
         
         return Aroon._Aroon__compute_aroon(high, low, period)
 
+
 class RVI(IIndicator):
     """Relative Vigor Index (RVI) indicator."""
 
