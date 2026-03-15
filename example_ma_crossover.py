@@ -16,8 +16,7 @@ from pyeventbt import (
     Modules,
     StrategyTimeframes,
     PassthroughRiskConfig,
-    MinSizingConfig,
-    Mt5PlatformConfig,
+    MinSizingConfig
 )
 from pyeventbt.events.events import OrderType, SignalType
 from pyeventbt.strategy.core.account_currencies import AccountCurrencies
