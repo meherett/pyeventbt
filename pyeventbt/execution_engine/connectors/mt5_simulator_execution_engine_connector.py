@@ -22,7 +22,7 @@ from pyeventbt.portfolio.core.entities.pending_order import PendingOrder
 from pyeventbt.events.events import BarEvent, FillEvent, OrderEvent, SignalType
 from pyeventbt.broker.mt5_broker.mt5_simulator_wrapper import Mt5SimulatorWrapper as mt5
 from pyeventbt.broker.mt5_broker.shared.shared_data import SharedData
-from pyeventbt.utils.utils import Utils
+from pyeventbt.utils.utils import Utils, ALL_FX_SYMBOLS
 
 from datetime import datetime, timedelta, timezone
 from queue import Queue
@@ -70,7 +70,6 @@ class Mt5SimulatorExecutionEngineConnector(IExecutionEngine):
         self._update_shared_data_account_info()
 
         # Symbols
-        self.all_fx_symbols = ("AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDUSD", "CADCHF", "CADJPY", "CHFJPY", "EURAUD", "EURCAD", "EURCHF", "EURGBP", "EURJPY", "EURNZD", "EURUSD", "GBPAUD", "GBPCAD", "GBPCHF", "GBPJPY", "GBPNZD", "GBPUSD", "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD", "USDCAD", "USDCHF", "USDJPY", "USDSEK", "USDNOK")
         self.all_commodities_symbols = ("XAUUSD", "XAGUSD", "XTIUSD", "XNGUSD")
         self.all_indices_symbols = ("NI225", "WS30", "SP500", "FCHI40", "AUS200", "NDX", "UK100", "STOXX50E", "GDAXI", "SPA35")
 
@@ -169,7 +168,7 @@ class Mt5SimulatorExecutionEngineConnector(IExecutionEngine):
         margin_ccy = symbol_info.currency_margin
         
         # Margins will be given in margin_ccy of the symb
-        if symbol in self.all_fx_symbols:
+        if symbol in ALL_FX_SYMBOLS:
             # FX formula
             margin = volume * contract_size * margin_rate
         else:
@@ -238,7 +237,7 @@ class Mt5SimulatorExecutionEngineConnector(IExecutionEngine):
             The rest of indices = 2.75 points per lot
         """
         symbol_info = mt5.symbol_info(symbol)
-        if symbol in self.all_fx_symbols:
+        if symbol in ALL_FX_SYMBOLS:
             notional_commission = volume * Decimal('2.5')
         elif symbol in self.all_commodities_symbols:
             notional_commission = Decimal(str(symbol_info.trade_contract_size)) * volume * trade_price * Decimal('0.000025')
@@ -600,29 +599,31 @@ class Mt5SimulatorExecutionEngineConnector(IExecutionEngine):
         """
         Updates the floating PnL (profit and loss) of the open positions for the symbol of the BarEvent.
         This method iterates through all open positions for the symbol of the BarEvent and updates their current price and profit.
-        It then calculates the global PnL by summing up the profit of all open positions for the symbol.
+        It then calculates the global PnL by summing up the profit of ALL open positions (across all symbols),
+        mirroring how the MT5 platform computes equity in live trading.
         Finally, it updates the account values: equity and free margin.
-        
+
         :param bar_event: The BarEvent object containing the symbol and data for the current bar.
         :type bar_event: BarEvent
         :return: None
         """
-        # No need to copy now as we are not deleting elements from the dict during iteration
-        global_pnl = Decimal('0.0')
+        # Update price and profit only for positions matching the bar's symbol
         for position in self.open_positions.values():
             if bar_event.symbol != position.symbol:
                 continue
-            
+
             # Update the current price of the position
             position.price_current = Decimal(str(bar_event.data.close_f))
-            
-            # Update the profit of the position and add it to the global PnL
+
+            # Update the profit of the position
             entry_type = "BUY" if position.type == 0 else "SELL"
             position.profit = self._compute_trade_gross_profit_in_account_currency(symbol=position.symbol, entry_type=entry_type, volume=position.volume, entry_price=position.price_open, close_price=position.price_current)
-            global_pnl += position.profit
-            
-        # Update account values: balance, used margin and free margin
-        self.equity = self.balance + global_pnl
+
+        # Equity from ALL open positions, not just the current symbol. Other symbols carry
+        # their last computed profit, which is the best available estimate — same as MT5 live
+        # using the last known tick price per symbol.
+        total_pnl = sum(p.profit for p in self.open_positions.values())
+        self.equity = self.balance + total_pnl
         self.free_margin = self.equity - self.used_margin
 
         # Update the shared data with the account information for the simulator
