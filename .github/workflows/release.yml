@@ -36,13 +36,17 @@ jobs:
           echo "RELEASE_NAME=$(poetry version)" >> $GITHUB_ENV
           echo "TAG_NAME=v$(poetry version -s)" >> $GITHUB_ENV
 
-      - name: Create Release Notes
+      - name: Extract Release Notes from CHANGELOG.md
         if: github.ref == 'refs/heads/main'
         run: |
-          echo "## Release notes" > NOTES.md
-          echo "Automated release for $(poetry version)" >> NOTES.md
-          echo "" >> NOTES.md
-          echo "This release was automatically created from the main branch." >> NOTES.md
+          VERSION=$(poetry version -s)
+          # Extract the section for the current version from CHANGELOG.md
+          # Matches from "## [X.Y.Z]" until the next "## [" or end of file
+          awk "/^## \\[${VERSION}\\]/{found=1; next} /^## \\[/{if(found) exit} found" CHANGELOG.md > NOTES.md
+          # Fallback if no matching section found
+          if [ ! -s NOTES.md ]; then
+            echo "Release ${VERSION}" > NOTES.md
+          fi
 
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main'

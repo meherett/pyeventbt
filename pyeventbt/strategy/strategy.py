@@ -10,6 +10,7 @@ Licensed under the Apache License, Version 2.0
 
 import os
 from pyeventbt.backtest.core.backtest_results import BacktestResults
+from pyeventbt.broker.mt5_broker.shared.shared_data import SharedData
 from pyeventbt.core.entities.hyper_parameter import HyperParameter
 from pyeventbt.hooks.hook_service import HookService, Hooks
 
@@ -119,7 +120,7 @@ class Strategy:
         self.__hooks.disable_hooks()
         
     # this is the decorator that the user will use to declare their signal_engine
-    def custom_signal_engine(self, strategy_id: str = 'default', strategy_timeframes: list[StrategyTimeframes] = [StrategyTimeframes.ONE_MIN]):
+    def custom_signal_engine(self, strategy_id: str = 'default', strategy_timeframes: list[StrategyTimeframes] | None = None):
         """Decorator to set a custom signal engine for a strategy.
         The decorator must be used in the following way:
 
@@ -155,10 +156,12 @@ class Strategy:
             strategy_timeframes (List[StrategyTimeframes]): The timesframes at which this strategy is going to be called .Defaults to StrategyTimeframes.ONE_MIN
 
         """
-        
+        if strategy_timeframes is None:
+            strategy_timeframes = [StrategyTimeframes.ONE_MIN]
+
         for timeframe in strategy_timeframes:
             self.__strategy_timeframes.append(timeframe) if timeframe not in self.__strategy_timeframes else None
-        
+
         def decorator(fn: Callable[[BarEvent, Modules], SignalEvent]):
             self.__signal_engines.setdefault(strategy_id, fn)
         
@@ -232,8 +235,10 @@ class Strategy:
             
         return decorator
     
-    def configure_predefined_signal_engine(self, conf: MACrossoverConfig, strategy_timeframes: list[StrategyTimeframes] = [StrategyTimeframes.ONE_MIN]):
-        
+    def configure_predefined_signal_engine(self, conf: MACrossoverConfig, strategy_timeframes: list[StrategyTimeframes] | None = None):
+        if strategy_timeframes is None:
+            strategy_timeframes = [StrategyTimeframes.ONE_MIN]
+
         for timeframe in strategy_timeframes:
             self.__strategy_timeframes.append(timeframe) if timeframe not in self.__strategy_timeframes else None
         
@@ -299,16 +304,23 @@ class Strategy:
             start_date: datetime = datetime(year=1970, month=1, day=1),
             end_date: datetime = datetime.now(),
             backtest_name: str = "Backtests",
-            symbols_to_trade: list[str] = ['EURUSD'],
+            symbols_to_trade: list[str] | None = None,
             csv_dir: str|None = None,
             run_scheduled_taks: bool = False,
             export_backtest_csv: bool = False,
             export_backtest_parquet: bool = True,
             backtest_results_dir: str|None = None
         ):
+        if symbols_to_trade is None:
+            symbols_to_trade = ['EURUSD']
+
+        # Reset SharedData to YAML defaults so sequential backtests (e.g. optimization loops)
+        # start with clean simulator state (symbol_info, account_info, etc.)
+        SharedData()
+
         # the queue is instantited here to avoid problems when performing a backtest inside a backtest.
-        self.EVENTS_QUEUE = Queue() 
-        
+        self.EVENTS_QUEUE = Queue()
+
         # Set the trading context
         trading_context = TypeContext.BACKTEST
         
@@ -422,13 +434,14 @@ class Strategy:
         mt5_configuration: Mt5PlatformConfig,  
         strategy_id: str = "default",
         initial_capital: float = 10000.0,
-        symbols_to_trade: list[str] = ['EURUSD'],
+        symbols_to_trade: list[str] | None = None,
         heartbeat: float = 0.1,
         ):
-        
-        
+        if symbols_to_trade is None:
+            symbols_to_trade = ['EURUSD']
+
         self.EVENTS_QUEUE = Queue()
-        
+
         # Set the LIVE trading context
         trading_context = TypeContext.LIVE
 
