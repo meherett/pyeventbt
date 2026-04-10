@@ -15,7 +15,7 @@ from pyeventbt.events.events import SignalEvent
 from pyeventbt.data_provider.core.interfaces.data_provider_interface import IDataProvider
 from pyeventbt.portfolio_handler.core.entities.suggested_order import SuggestedOrder
 import pyeventbt.trading_context.trading_context as trading_context
-from pyeventbt.utils.utils import Utils, check_platform_compatibility
+from pyeventbt.utils.utils import Utils, ALL_FX_SYMBOLS, check_platform_compatibility
 from decimal import Decimal
 
     
@@ -66,21 +66,21 @@ class MT5RiskPctSizing(ISizingEngine):
         Returns:
             float: Converted amount in target currency
         """
-        all_fx_symbols = ("AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDUSD", "CADCHF", "CADJPY", "CHFJPY", "EURAUD", "EURCAD",
-                            "EURCHF", "EURGBP", "EURJPY", "EURNZD", "EURUSD", "GBPAUD", "GBPCAD", "GBPCHF", "GBPJPY", "GBPNZD",
-                            "GBPUSD", "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD", "USDCAD", "USDCHF", "USDJPY", "USDSEK", "USDNOK")
-        
         # Convert the currencies to uppercase
         from_ccy = from_ccy.upper()
         to_ccy = to_ccy.upper()
-        
+
         # If the currencies are the same, return the amount
         if from_ccy == to_ccy:
             return amount
-        
-        # Find the symbol in all_fx_symbols that contains both the margin_ccy and the account_currency
+
+        # Find the symbol in ALL_FX_SYMBOLS that contains both the margin_ccy and the account_currency
         # For example, if margin_ccy = "USD" and account_currency = "EUR", the symbol will be "EURUSD"
-        fx_symbol = [s for s in all_fx_symbols if from_ccy in s and to_ccy in s][0]
+        matches = [s for s in ALL_FX_SYMBOLS if from_ccy in s and to_ccy in s]
+        if not matches:
+            raise ValueError(f"No FX pair found for {from_ccy}/{to_ccy}. Supported account currencies are EUR, USD and GBP. "
+                             f"If you are trading a symbol with an unsupported currency, add the corresponding FX pair to ALL_FX_SYMBOLS in utils.py.")
+        fx_symbol = matches[0]
         fx_symbol_base = fx_symbol[:3]
 
         # Get the conversion rate.
