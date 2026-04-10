@@ -19,7 +19,16 @@ import os
 from functools import lru_cache
 import logging
 
-logger = logging.getLogger("PyEventBT") # Using the root logger
+logger = logging.getLogger("pyeventbt")
+
+ALL_FX_SYMBOLS = (
+    "AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDUSD",
+    "CADCHF", "CADJPY", "CHFJPY",
+    "EURAUD", "EURCAD", "EURCHF", "EURGBP", "EURJPY", "EURNZD", "EURUSD", "EURMXN",
+    "GBPAUD", "GBPCAD", "GBPCHF", "GBPJPY", "GBPNZD", "GBPUSD",
+    "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD",
+    "USDCAD", "USDCHF", "USDJPY", "USDSEK", "USDNOK", "USDMXN",
+)
 
 class TerminalColors:
     HEADER = '\033[95m'
@@ -187,12 +196,12 @@ class Utils():
         if from_ccy == to_ccy:
             return amount
         
-        all_fx_symbol = ("AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDUSD", "CADCHF", "CADJPY", "CHFJPY", "EURAUD", "EURCAD",
-                        "EURCHF", "EURGBP", "EURJPY", "EURNZD", "EURUSD", "GBPAUD", "GBPCAD", "GBPCHF", "GBPJPY", "GBPNZD",
-                        "GBPUSD", "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD", "USDCAD", "USDCHF", "USDJPY", "USDSEK", "USDNOK", "USDMXN", "EURMXN")
-
         # Buscamos el símbolo que relaciona nuestra divisa origen con nuestra divisa destino (list comprehension)
-        fx_symbol = [symbol for symbol in all_fx_symbol if from_ccy in symbol and to_ccy in symbol][0]
+        matches = [symbol for symbol in ALL_FX_SYMBOLS if from_ccy in symbol and to_ccy in symbol]
+        if not matches:
+            raise ValueError(f"No FX pair found for {from_ccy}/{to_ccy}. Supported account currencies are EUR, USD and GBP. "
+                             f"If you are trading a symbol with an unsupported currency, add the corresponding FX pair to ALL_FX_SYMBOLS in utils.py.")
+        fx_symbol = matches[0]
         fx_symbol_base = fx_symbol[:3]
 
         # Get the conversion rate
@@ -226,12 +235,12 @@ class Utils():
         if from_ccy == to_ccy:
             return Decimal(1)
         
-        all_fx_symbol = ("AUDCAD", "AUDCHF", "AUDJPY", "AUDNZD", "AUDUSD", "CADCHF", "CADJPY", "CHFJPY", "EURAUD", "EURCAD",
-                        "EURCHF", "EURGBP", "EURJPY", "EURNZD", "EURUSD", "GBPAUD", "GBPCAD", "GBPCHF", "GBPJPY", "GBPNZD",
-                        "GBPUSD", "NZDCAD", "NZDCHF", "NZDJPY", "NZDUSD", "USDCAD", "USDCHF", "USDJPY", "USDSEK", "USDNOK", "USDMXN", "EURMXN")
-
         # Buscamos el símbolo que relaciona nuestra divisa origen con nuestra divisa destino (list comprehension)
-        fx_symbol = [symbol for symbol in all_fx_symbol if from_ccy in symbol and to_ccy in symbol][0]
+        matches = [symbol for symbol in ALL_FX_SYMBOLS if from_ccy in symbol and to_ccy in symbol]
+        if not matches:
+            raise ValueError(f"No FX pair found for {from_ccy}/{to_ccy}. Supported account currencies are EUR, USD and GBP. "
+                             f"If you are trading a symbol with an unsupported currency, add the corresponding FX pair to ALL_FX_SYMBOLS in utils.py.")
+        fx_symbol = matches[0]
         fx_symbol_base = fx_symbol[:3]
 
         # Get the conversion rate
