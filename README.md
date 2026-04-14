@@ -13,6 +13,35 @@ Whether you're building simple moving average crossovers or complex multi-rule a
 
 Its modular architecture allows you to design your own signal sources, position sizing logic and risk management overlay as independent and interchangeable blocks.
 
+## Why PyEventBT?
+
+If you're looking to connect Python and MetaTrader 5 for algorithmic trading, PyEventBT gives you a complete event-driven backtesting and live trading framework without writing a single line of MQL5.
+
+Its core design principle is **one codebase, two modes**: the framework provides a full mock of the MT5 API, so the same strategy code you use for backtesting runs unchanged in live trading. This eliminates the common problem of backtest-to-live divergence and lets you focus on strategy logic rather than infrastructure.
+
+- **Native MT5 integration** — Connect Python to MetaTrader 5 for live order execution, position management, and real-time data
+- **Realistic backtesting** — Event-driven processing ensures your strategy only sees data available at that moment, preventing look-ahead bias by design
+- **Modular engines** — Plug in your own signal generation, position sizing, and risk management logic as independent, interchangeable components
+- **Multi-everything** — Handle multiple timeframes, instruments, and trading rules in a single strategy
+- **Python ecosystem** — Built on Polars, NumPy, and Pandas — use any Python library in your strategies
+
+## Key Concepts
+
+PyEventBT processes market data through an event pipeline. You only write the signal logic — the framework handles everything else:
+
+```
+BarEvent → Your Strategy → SignalEvent → Sizing Engine → Risk Engine → OrderEvent → Execution Engine → FillEvent → Portfolio
+```
+
+| Component | What it does |
+| :--- | :--- |
+| **Signal Engine** | Your strategy logic — receives market data, returns trading signals |
+| **Sizing Engine** | Calculates position size (min lot, fixed, or risk-percentage based) |
+| **Risk Engine** | Validates orders against your risk rules before execution |
+| **Execution Engine** | Routes orders to the simulated broker (backtest) or MT5 (live) |
+| **Portfolio** | Tracks positions, balance, equity, and P&L |
+| **Data Provider** | Serves historical bars (CSV) or real-time data (MT5) |
+
 ## Installation
 
 ```bash
@@ -354,9 +383,28 @@ print("Backtest finished")
 backtest.plot()
 ```
 
+## How PyEventBT Compares
+
+The Python ecosystem has several excellent backtesting frameworks, each with different strengths. Here's how they differ:
+
+| | PyEventBT | Backtrader | Zipline | VectorBT |
+|---|---|---|---|---|
+| **Architecture** | Event-driven | Event-driven | Event-driven | Vectorized |
+| **MetaTrader 5 integration** | Native | — | — | — |
+| **Live trading** | Yes (via MT5) | Community brokers | — | — |
+| **Same code backtest & live** | Yes (full MT5 API mock) | Partial | — | — |
+| **Language** | Python only | Python only | Python only | Python only |
+| **Look-ahead bias prevention** | By design | By design | By design | Manual |
+| **Multi-timeframe** | Yes | Yes | Limited | Yes |
+| **Pending orders (Limit/Stop)** | Yes | Yes | Limited | — |
+
+**When to choose PyEventBT**: You trade on MetaTrader 5 and want to develop, backtest, and deploy strategies entirely in Python — using the same code and the same MT5 API in both backtesting and production, with no MQL5 required.
+
+**When to choose another framework**: If you don't use MetaTrader 5 as your broker, or if you need vectorized backtesting for high-frequency tick-level research, other frameworks may be a better fit.
+
 ## Documentation
 
-📚 **Full documentation available at <a href="https://pyeventbt.com?utm_source=github&utm_medium=readme" target="_blank">pyeventbt.com</a>.**
+**Full documentation available at <a href="https://pyeventbt.com?utm_source=github&utm_medium=readme" target="_blank">pyeventbt.com</a>.**
 
 The documentation includes:
 - Complete API reference
@@ -365,14 +413,16 @@ The documentation includes:
 - Advanced configuration options
 - Live trading setup guides
 
+For LLM-friendly documentation, see [llms.txt](https://pyeventbt.com/llms.txt) and [llms-full.txt](https://pyeventbt.com/llms-full.txt).
+
 ## Features
 
-- 🎯 Event-driven architecture for realistic backtesting
-- 📊 Built-in technical indicators (ATR, SMA, RSI, and more)
-- 🔄 Seamless transition from backtest to live trading
-- 📈 Comprehensive performance metrics and visualization
-- ⚙️ Flexible risk and position sizing engines
-- 🔌 MetaTrader 5 integration for live trading
+- Event-driven architecture for realistic backtesting
+- Built-in technical indicators (ATR, SMA, RSI, and more)
+- Seamless transition from backtest to live trading
+- Comprehensive performance metrics and visualization
+- Flexible risk and position sizing engines
+- MetaTrader 5 integration for live trading
 
 ## License
 
