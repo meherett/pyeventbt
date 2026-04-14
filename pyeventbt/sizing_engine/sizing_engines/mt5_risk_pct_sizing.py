@@ -149,7 +149,7 @@ class MT5RiskPctSizing(ISizingEngine):
         price_distance = int(abs(entry_price - signal_event.sl) / tick_size)    # compute price distance in integer price min sizes
         monetary_risk = equity * risk_pct / 100                                 # compute monetary risk in account currency
         volume = monetary_risk / (price_distance * tick_value_account_ccy)      # compute volume in lots
-        volume = round(volume / volume_step) * volume_step                      # normalize to volume_step units
+        volume = int(volume / volume_step) * volume_step                        # normalize to volume_step units (rounds down to never exceed intended risk)
 
         return SuggestedOrder(signal_event=signal_event,
                             volume=volume)

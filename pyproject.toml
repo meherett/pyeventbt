@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pyeventbt"
-version = "0.0.7"
+version = "0.0.8"
 description = "Event-driven backtesting and live trading framework for Python and MetaTrader 5"
 authors = ["Marti Castany, Alain Porto"]
 readme = "README.md"
@@ -14,14 +14,27 @@ keywords = [
     "mt5 python",
     "event-driven",
     "trading",
+    "algorithmic-trading",
+    "python-trading",
+    "quantitative-finance",
+    "live-trading",
+    "metatrader",
+    "forex",
+    "technical-analysis",
 ]
 classifiers = [
-    "Development Status :: 1 - Planning",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Scientific/Engineering :: Information Analysis",
 ]
 packages = [{ include = "pyeventbt" }]
+
+[tool.poetry.urls]
+Documentation = "https://pyeventbt.com"
 
 [tool.poetry.dependencies]
 python = "^3.12"
