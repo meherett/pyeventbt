@@ -2,6 +2,12 @@
 
 All notable changes to PyEventBT will be documented in this file.
 
+## [0.0.9] - 2026-04-16
+
+### Bug Fixes
+
+- Deduplicate `tradeable_symbol_list` in both CSV and MT5 live data connectors to prevent a symbol's data generator from advancing multiple times per cycle. When a symbol appeared more than once in the list, its generator was called N times per `update_bars()` cycle, causing that symbol to process bars at Nx speed and desynchronize from other symbols. A warning is now logged when duplicates are removed.
+
 ## [0.0.8] - 2026-04-14
 
 ### Bug Fixes
