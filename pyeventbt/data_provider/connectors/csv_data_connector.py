@@ -76,8 +76,11 @@ class CSVDataProvider(IDataProvider):
         self.account_currency = configs.account_currency
 
         # auxiliary crosses
-        self.auxiliary_symbol_list = self._create_auxiliary_symbol_list(configs.tradeable_symbol_list, self.account_currency)
-        self.tradeable_symbols = configs.tradeable_symbol_list
+        self.tradeable_symbols = list(dict.fromkeys(configs.tradeable_symbol_list))
+        if len(self.tradeable_symbols) != len(configs.tradeable_symbol_list):
+            duplicates = list(dict.fromkeys(s for s in configs.tradeable_symbol_list if configs.tradeable_symbol_list.count(s) > 1))
+            logger.warning(f"You had duplicated symbols in your symbol list: {duplicates}. Duplicates have been automatically removed — no action needed.")
+        self.auxiliary_symbol_list = self._create_auxiliary_symbol_list(self.tradeable_symbols, self.account_currency)
         self.symbol_list = self.tradeable_symbols + self.auxiliary_symbol_list
 
         # will hold per‐symbol, per‐tf DataFrames

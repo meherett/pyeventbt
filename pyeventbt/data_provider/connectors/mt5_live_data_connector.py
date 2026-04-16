@@ -45,7 +45,10 @@ class Mt5LiveDataProvider(IDataProvider):
         downloading the historical data for the symbols in the symbol list.
         """
         #self.event_queue = event_queue
-        self.symbol_list = configs.tradeable_symbol_list
+        self.symbol_list = list(dict.fromkeys(configs.tradeable_symbol_list))
+        if len(self.symbol_list) != len(configs.tradeable_symbol_list):
+            duplicates = list(dict.fromkeys(s for s in configs.tradeable_symbol_list if configs.tradeable_symbol_list.count(s) > 1))
+            logger.warning(f"You had duplicated symbols in your symbol list: {duplicates}. Duplicates have been automatically removed — no action needed.")
         self.timeframes_list = configs.timeframes_list
 
         # We need to store the datetime of the last bar seen for each symbol so we can generate the events with update_bars()
